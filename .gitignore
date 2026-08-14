@@ -1,0 +1,5 @@
+.DS_Store
+*.log
+# Never commit local data-import helpers (they contain real goal data)
+import-*.html
+seed.private.js
