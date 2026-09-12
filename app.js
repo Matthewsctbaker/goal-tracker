@@ -496,38 +496,51 @@ function GoalCard({
   }, s.icon))));
 }
 function TimelineView({
-  visible,
-  catById
+  cats,
+  visible
 }) {
+  const rows = cats.filter(c => visible.some(x => x.category === c.id));
+  const months = MONTHS.slice(1);
+  if (rows.length === 0) return null;
   return /*#__PURE__*/React.createElement("div", {
-    className: "timeline"
-  }, MONTHS.slice(1).map((m, i) => {
+    className: "tl-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "tl-grid",
+    style: {
+      gridTemplateColumns: "150px repeat(12, minmax(100px, 1fr))"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "tl-corner"
+  }), months.map(m => /*#__PURE__*/React.createElement("div", {
+    key: m,
+    className: "tl-col-head"
+  }, m)), rows.map(c => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: c.id
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "tl-row-head",
+    style: {
+      borderLeftColor: c.color
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "swatch",
+    style: {
+      background: c.color
+    }
+  }), /*#__PURE__*/React.createElement("span", null, c.name)), months.map((m, i) => {
     const month = i + 1;
-    const items = visible.filter(x => x.month === month).sort((a, b) => a.category.localeCompare(b.category));
+    const items = visible.filter(x => x.category === c.id && x.month === month);
     return /*#__PURE__*/React.createElement("div", {
-      className: "tl-month",
+      className: "tl-cell",
       key: month
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "m"
-    }, m), /*#__PURE__*/React.createElement("div", {
-      className: "tl-items"
-    }, items.length === 0 ? /*#__PURE__*/React.createElement("span", {
+    }, items.map(x => /*#__PURE__*/React.createElement("span", {
+      key: x.id,
+      className: "tl-chip " + x.status,
       style: {
-        color: "var(--muted)",
-        fontSize: 13
-      }
-    }, "\u2014") : items.map(x => {
-      const c = catById(x.category);
-      return /*#__PURE__*/React.createElement("span", {
-        key: x.id,
-        className: "tl-pill " + x.status,
-        style: {
-          borderLeftColor: c.color
-        },
-        title: c.name + " · " + x.status
-      }, x.title);
-    })));
-  }));
+        borderLeftColor: c.color
+      },
+      title: c.name + " · " + x.status
+    }, x.title)));
+  })))));
 }
 function GoalModal({
   goal,

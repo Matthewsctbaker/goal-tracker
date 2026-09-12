@@ -328,28 +328,36 @@ function GoalCard({ goal, color, setStatus, setProgress, onEdit, onDelete }) {
   );
 }
 
-function TimelineView({ visible, catById }) {
+function TimelineView({ cats, visible }) {
+  const rows = cats.filter((c) => visible.some((x) => x.category === c.id));
+  const months = MONTHS.slice(1);
+  if (rows.length === 0) return null;
   return (
-    <div className="timeline">
-      {MONTHS.slice(1).map((m, i) => {
-        const month = i + 1;
-        const items = visible.filter((x) => x.month === month).sort((a, b) => a.category.localeCompare(b.category));
-        return (
-          <div className="tl-month" key={month}>
-            <div className="m">{m}</div>
-            <div className="tl-items">
-              {items.length === 0 ? <span style={{ color: "var(--muted)", fontSize: 13 }}>—</span> :
-                items.map((x) => {
-                  const c = catById(x.category);
-                  return (
-                    <span key={x.id} className={"tl-pill " + x.status} style={{ borderLeftColor: c.color }}
-                      title={c.name + " · " + x.status}>{x.title}</span>
-                  );
-                })}
+    <div className="tl-wrap">
+      <div className="tl-grid" style={{ gridTemplateColumns: "150px repeat(12, minmax(100px, 1fr))" }}>
+        <div className="tl-corner" />
+        {months.map((m) => <div key={m} className="tl-col-head">{m}</div>)}
+        {rows.map((c) => (
+          <React.Fragment key={c.id}>
+            <div className="tl-row-head" style={{ borderLeftColor: c.color }}>
+              <span className="swatch" style={{ background: c.color }} />
+              <span>{c.name}</span>
             </div>
-          </div>
-        );
-      })}
+            {months.map((m, i) => {
+              const month = i + 1;
+              const items = visible.filter((x) => x.category === c.id && x.month === month);
+              return (
+                <div className="tl-cell" key={month}>
+                  {items.map((x) => (
+                    <span key={x.id} className={"tl-chip " + x.status} style={{ borderLeftColor: c.color }}
+                      title={c.name + " · " + x.status}>{x.title}</span>
+                  ))}
+                </div>
+              );
+            })}
+          </React.Fragment>
+        ))}
+      </div>
     </div>
   );
 }
