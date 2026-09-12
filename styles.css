@@ -247,3 +247,23 @@ body {
 .gate-btn.google { background: #fff; color: #1f2937; border: 1px solid var(--line); }
 @media (prefers-color-scheme: dark) { .gate-btn.google { background: #fff; color: #1f2937; } }
 .gate-btn.google:hover { box-shadow: var(--shadow); }
+
+/* ---------- Sub-tabs (Twelve Month / Five Year / Who am I) ---------- */
+.subtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 0 0 18px; flex-wrap: wrap; }
+.subtab {
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 14px; font-weight: 700; padding: 10px 14px; border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.subtab:hover { color: var(--ink); }
+.subtab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ---------- Who am I ---------- */
+.whoami { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+.whoami-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 800; }
+.whoami-head p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.whoami-text {
+  width: 100%; min-height: 420px; resize: vertical; padding: 16px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.6;
+  font-family: inherit;
+}

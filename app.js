@@ -37,28 +37,39 @@ if (USE_FB) {
 const goalsDoc = () => fbDb.collection("trackers").doc("main");
 
 // ---------- local cache ----------
-function loadLocal() {
+// The synced document is { goals: [...], whoami: { <person>: "text" } }.
+function loadLocalDoc() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (Array.isArray(s.goals)) return s.goals;
+      return {
+        goals: Array.isArray(s.goals) ? s.goals : window.SEED_GOALS.slice(),
+        whoami: s.whoami || {}
+      };
     }
   } catch (e) {/* ignore */}
-  return window.SEED_GOALS.slice();
+  return {
+    goals: window.SEED_GOALS.slice(),
+    whoami: {}
+  };
 }
-function saveLocal(goals) {
+function saveLocalDoc(data) {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
-      goals,
+      goals: data.goals,
+      whoami: data.whoami,
       seedVersion: window.SEED_VERSION
     }));
   } catch (e) {/* ignore */}
 }
 
-// ---------- goal store: Firestore when signed in, else localStorage ----------
-function useGoalStore(user) {
-  const [goals, setGoals] = useState(() => USE_FB ? [] : loadLocal());
+// ---------- store: Firestore when signed in, else localStorage ----------
+function useCloudDoc(user) {
+  const [data, setData] = useState(() => USE_FB ? {
+    goals: [],
+    whoami: {}
+  } : loadLocalDoc());
   const [sync, setSync] = useState(USE_FB ? "loading" : "local"); // loading|synced|saving|offline|local
   const skipWrite = useRef(false);
   const ready = useRef(false);
@@ -70,15 +81,18 @@ function useGoalStore(user) {
     setSync("loading");
     const unsub = goalsDoc().onSnapshot(snap => {
       if (snap.exists) {
+        const d = snap.data();
         skipWrite.current = true;
-        setGoals(snap.data().goals || []);
+        setData({
+          goals: d.goals || [],
+          whoami: d.whoami || {}
+        });
         ready.current = true;
         setSync("synced");
       } else {
-        // First run for this account: create the doc from whatever this
-        // browser has cached (empty on a fresh device).
         goalsDoc().set({
-          goals: loadLocal(),
+          goals: loadLocalDoc().goals,
+          whoami: {},
           updatedAt: Date.now()
         });
       }
@@ -88,7 +102,7 @@ function useGoalStore(user) {
 
   // write local changes back to the cloud (debounced), and always cache locally
   useEffect(() => {
-    saveLocal(goals);
+    saveLocalDoc(data);
     if (!USE_FB || !user) return;
     if (skipWrite.current) {
       skipWrite.current = false;
@@ -98,36 +112,52 @@ function useGoalStore(user) {
     setSync("saving");
     const t = setTimeout(() => {
       goalsDoc().set({
-        goals,
+        goals: data.goals,
+        whoami: data.whoami,
         updatedAt: Date.now()
       }).then(() => setSync("synced")).catch(() => setSync("offline"));
     }, 400);
     return () => clearTimeout(t);
-  }, [goals, user]);
-  return [goals, setGoals, sync];
+  }, [data, user]);
+  return [data, setData, sync];
 }
+const horizonOf = g => g.horizon || "12m";
 function App({
   user,
   onSignOut
 }) {
   const cats = window.SEED_CATEGORIES;
   const people = window.SEED_PEOPLE;
-  const [goals, setGoals, sync] = useGoalStore(user);
+  const [data, setData, sync] = useCloudDoc(user);
+  const goals = data.goals;
+  function setGoals(updater) {
+    setData(d => ({
+      ...d,
+      goals: typeof updater === "function" ? updater(d.goals) : updater
+    }));
+  }
   const [person, setPerson] = useState("matthew");
+  const [section, setSection] = useState("12m"); // 12m | 5y | whoami (Matthew only)
   const [catFilter, setCatFilter] = useState("all");
   const [view, setView] = useState("board");
   const [editing, setEditing] = useState(null);
+
+  // Sub-tabs are Matthew-only; force the goals view for anyone else.
+  useEffect(() => {
+    if (person !== "matthew" && section !== "12m") setSection("12m");
+  }, [person]);
+  const goalSection = section === "5y" ? "5y" : "12m";
   const years = useMemo(() => {
-    const s = new Set(goals.map(x => x.year || window.SEED_YEAR));
+    const s = new Set(goals.filter(x => horizonOf(x) === goalSection).map(x => x.year || window.SEED_YEAR));
     if (!s.size) s.add(window.SEED_YEAR);
     return Array.from(s).sort((a, b) => a - b);
-  }, [goals]);
+  }, [goals, goalSection]);
   const [year, setYear] = useState(() => Math.max.apply(null, years));
   useEffect(() => {
     if (!years.includes(year)) setYear(Math.max.apply(null, years));
-  }, [years]); // keep selected year valid as data loads
+  }, [years]); // keep selected year valid as data / section loads
 
-  const mine = useMemo(() => goals.filter(x => x.person === person && (x.year || window.SEED_YEAR) === year), [goals, person, year]);
+  const mine = useMemo(() => goals.filter(x => x.person === person && horizonOf(x) === goalSection && (x.year || window.SEED_YEAR) === year), [goals, person, year, goalSection]);
   const presentCats = useMemo(() => cats.filter(c => mine.some(x => x.category === c.id)), [cats, mine]);
   useEffect(() => {
     setCatFilter("all");
@@ -197,7 +227,25 @@ function App({
     setEditing(null);
   }
   const catById = id => cats.find(c => c.id === id);
-  const personCount = pid => goals.filter(x => x.person === pid && (x.year || window.SEED_YEAR) === year).length;
+  const personCount = pid => goals.filter(x => x.person === pid && horizonOf(x) === "12m" && (x.year || window.SEED_YEAR) === year).length;
+  const whoamiText = data.whoami && data.whoami[person] || "";
+  const setWhoami = text => setData(d => ({
+    ...d,
+    whoami: {
+      ...(d.whoami || {}),
+      [person]: text
+    }
+  }));
+  const SUBTABS = [{
+    id: "12m",
+    label: "Twelve Month Goals"
+  }, {
+    id: "5y",
+    label: "Five Year Goals"
+  }, {
+    id: "whoami",
+    label: "Who am I?"
+  }];
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("header", {
     className: "app-head"
   }, /*#__PURE__*/React.createElement("div", {
@@ -219,7 +267,7 @@ function App({
     className: "count"
   }, personCount(p.id))))), /*#__PURE__*/React.createElement("span", {
     className: "spacer"
-  }), /*#__PURE__*/React.createElement("div", {
+  }), section !== "whoami" && /*#__PURE__*/React.createElement("div", {
     className: "seg year-seg"
   }, years.map(y => /*#__PURE__*/React.createElement("button", {
     key: y,
@@ -233,7 +281,17 @@ function App({
     sync: sync,
     user: user,
     onSignOut: onSignOut
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), person === "matthew" && /*#__PURE__*/React.createElement("div", {
+    className: "subtabs"
+  }, SUBTABS.map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.id,
+    className: "subtab" + (section === t.id ? " active" : ""),
+    onClick: () => setSection(t.id)
+  }, t.label))), section === "whoami" ? /*#__PURE__*/React.createElement(WhoAmI, {
+    value: whoamiText,
+    onChange: setWhoami,
+    name: people.find(p => p.id === person).name
+  }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "summary"
   }, /*#__PURE__*/React.createElement("div", {
     className: "stat"
@@ -310,7 +368,8 @@ function App({
       note: "",
       year,
       target: 0,
-      progress: 0
+      progress: 0,
+      horizon: goalSection
     })
   }, "+ Add goal")), sync === "loading" ? /*#__PURE__*/React.createElement("div", {
     className: "empty"
@@ -320,7 +379,7 @@ function App({
     className: "empty"
   }, /*#__PURE__*/React.createElement("div", {
     className: "big"
-  }, "\uD83C\uDF31"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", null, "No goals yet")), /*#__PURE__*/React.createElement("div", null, "Add ", person === "violette" ? "Violette's" : "your", " first goal to get started.")) : view === "board" ? /*#__PURE__*/React.createElement(BoardView, {
+  }, "\uD83C\uDF31"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", null, "No goals yet")), /*#__PURE__*/React.createElement("div", null, "Add your first ", section === "5y" ? "five-year" : "", " goal to get started.")) : view === "board" ? /*#__PURE__*/React.createElement(BoardView, {
     cats: cats,
     catFilter: catFilter,
     visible: visible,
@@ -332,7 +391,7 @@ function App({
     cats: cats,
     visible: visible,
     catById: catById
-  }), editing && /*#__PURE__*/React.createElement(GoalModal, {
+  })), editing && /*#__PURE__*/React.createElement(GoalModal, {
     goal: editing,
     cats: cats,
     people: people,
@@ -658,6 +717,22 @@ function GoalModal({
       title: form.title.trim()
     })
   }, isNew ? "Add" : "Save"))));
+}
+function WhoAmI({
+  value,
+  onChange,
+  name
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "whoami"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "whoami-head"
+  }, /*#__PURE__*/React.createElement("h2", null, "Who am I?"), /*#__PURE__*/React.createElement("p", null, name, "'s values, identity, and the person behind the goals. Saved automatically as you type.")), /*#__PURE__*/React.createElement("textarea", {
+    className: "whoami-text",
+    value: value,
+    onChange: e => onChange(e.target.value),
+    placeholder: "Write freely here…\n\n• My core values\n• What I stand for\n• My strengths & the person I'm becoming\n• What matters most to me\n• My purpose / mission"
+  }));
 }
 
 // ---------- Auth gate (Google sign-in when Firebase is configured) ----------

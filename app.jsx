@@ -22,21 +22,26 @@ if (USE_FB) {
 const goalsDoc = () => fbDb.collection("trackers").doc("main");
 
 // ---------- local cache ----------
-function loadLocal() {
+// The synced document is { goals: [...], whoami: { <person>: "text" } }.
+function loadLocalDoc() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) { const s = JSON.parse(raw); if (Array.isArray(s.goals)) return s.goals; }
+    if (raw) {
+      const s = JSON.parse(raw);
+      return { goals: Array.isArray(s.goals) ? s.goals : window.SEED_GOALS.slice(),
+               whoami: s.whoami || {} };
+    }
   } catch (e) { /* ignore */ }
-  return window.SEED_GOALS.slice();
+  return { goals: window.SEED_GOALS.slice(), whoami: {} };
 }
-function saveLocal(goals) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ goals, seedVersion: window.SEED_VERSION })); }
+function saveLocalDoc(data) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ goals: data.goals, whoami: data.whoami, seedVersion: window.SEED_VERSION })); }
   catch (e) { /* ignore */ }
 }
 
-// ---------- goal store: Firestore when signed in, else localStorage ----------
-function useGoalStore(user) {
-  const [goals, setGoals] = useState(() => (USE_FB ? [] : loadLocal()));
+// ---------- store: Firestore when signed in, else localStorage ----------
+function useCloudDoc(user) {
+  const [data, setData] = useState(() => (USE_FB ? { goals: [], whoami: {} } : loadLocalDoc()));
   const [sync, setSync] = useState(USE_FB ? "loading" : "local"); // loading|synced|saving|offline|local
   const skipWrite = useRef(false);
   const ready = useRef(false);
@@ -49,14 +54,13 @@ function useGoalStore(user) {
     const unsub = goalsDoc().onSnapshot(
       (snap) => {
         if (snap.exists) {
+          const d = snap.data();
           skipWrite.current = true;
-          setGoals(snap.data().goals || []);
+          setData({ goals: d.goals || [], whoami: d.whoami || {} });
           ready.current = true;
           setSync("synced");
         } else {
-          // First run for this account: create the doc from whatever this
-          // browser has cached (empty on a fresh device).
-          goalsDoc().set({ goals: loadLocal(), updatedAt: Date.now() });
+          goalsDoc().set({ goals: loadLocalDoc().goals, whoami: {}, updatedAt: Date.now() });
         }
       },
       () => setSync("offline")
@@ -66,45 +70,57 @@ function useGoalStore(user) {
 
   // write local changes back to the cloud (debounced), and always cache locally
   useEffect(() => {
-    saveLocal(goals);
+    saveLocalDoc(data);
     if (!USE_FB || !user) return;
     if (skipWrite.current) { skipWrite.current = false; return; }
     if (!ready.current) return;
     setSync("saving");
     const t = setTimeout(() => {
-      goalsDoc().set({ goals, updatedAt: Date.now() })
+      goalsDoc().set({ goals: data.goals, whoami: data.whoami, updatedAt: Date.now() })
         .then(() => setSync("synced"))
         .catch(() => setSync("offline"));
     }, 400);
     return () => clearTimeout(t);
-  }, [goals, user]);
+  }, [data, user]);
 
-  return [goals, setGoals, sync];
+  return [data, setData, sync];
 }
+
+const horizonOf = (g) => g.horizon || "12m";
 
 function App({ user, onSignOut }) {
   const cats = window.SEED_CATEGORIES;
   const people = window.SEED_PEOPLE;
 
-  const [goals, setGoals, sync] = useGoalStore(user);
+  const [data, setData, sync] = useCloudDoc(user);
+  const goals = data.goals;
+  function setGoals(updater) {
+    setData((d) => ({ ...d, goals: typeof updater === "function" ? updater(d.goals) : updater }));
+  }
+
   const [person, setPerson] = useState("matthew");
+  const [section, setSection] = useState("12m"); // 12m | 5y | whoami (Matthew only)
   const [catFilter, setCatFilter] = useState("all");
   const [view, setView] = useState("board");
   const [editing, setEditing] = useState(null);
 
+  // Sub-tabs are Matthew-only; force the goals view for anyone else.
+  useEffect(() => { if (person !== "matthew" && section !== "12m") setSection("12m"); }, [person]);
+  const goalSection = section === "5y" ? "5y" : "12m";
+
   const years = useMemo(() => {
-    const s = new Set(goals.map((x) => x.year || window.SEED_YEAR));
+    const s = new Set(goals.filter((x) => horizonOf(x) === goalSection).map((x) => x.year || window.SEED_YEAR));
     if (!s.size) s.add(window.SEED_YEAR);
     return Array.from(s).sort((a, b) => a - b);
-  }, [goals]);
+  }, [goals, goalSection]);
   const [year, setYear] = useState(() => Math.max.apply(null, years));
   useEffect(() => {
     if (!years.includes(year)) setYear(Math.max.apply(null, years));
-  }, [years]); // keep selected year valid as data loads
+  }, [years]); // keep selected year valid as data / section loads
 
   const mine = useMemo(
-    () => goals.filter((x) => x.person === person && (x.year || window.SEED_YEAR) === year),
-    [goals, person, year]
+    () => goals.filter((x) => x.person === person && horizonOf(x) === goalSection && (x.year || window.SEED_YEAR) === year),
+    [goals, person, year, goalSection]
   );
   const presentCats = useMemo(
     () => cats.filter((c) => mine.some((x) => x.category === c.id)),
@@ -157,7 +173,16 @@ function App({ user, onSignOut }) {
 
   const catById = (id) => cats.find((c) => c.id === id);
   const personCount = (pid) =>
-    goals.filter((x) => x.person === pid && (x.year || window.SEED_YEAR) === year).length;
+    goals.filter((x) => x.person === pid && horizonOf(x) === "12m" && (x.year || window.SEED_YEAR) === year).length;
+
+  const whoamiText = (data.whoami && data.whoami[person]) || "";
+  const setWhoami = (text) => setData((d) => ({ ...d, whoami: { ...(d.whoami || {}), [person]: text } }));
+
+  const SUBTABS = [
+    { id: "12m", label: "Twelve Month Goals" },
+    { id: "5y", label: "Five Year Goals" },
+    { id: "whoami", label: "Who am I?" },
+  ];
 
   return (
     <div>
@@ -174,11 +199,13 @@ function App({ user, onSignOut }) {
             ))}
           </div>
           <span className="spacer" />
-          <div className="seg year-seg">
-            {years.map((y) => (
-              <button key={y} className={year === y ? "active" : ""} onClick={() => setYear(y)}>{y}</button>
-            ))}
-          </div>
+          {section !== "whoami" && (
+            <div className="seg year-seg">
+              {years.map((y) => (
+                <button key={y} className={year === y ? "active" : ""} onClick={() => setYear(y)}>{y}</button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="sub-row">
           <p className="app-sub">Track your goals and Violette's — from your Year Plans.</p>
@@ -186,6 +213,19 @@ function App({ user, onSignOut }) {
         </div>
       </header>
 
+      {person === "matthew" && (
+        <div className="subtabs">
+          {SUBTABS.map((t) => (
+            <button key={t.id} className={"subtab" + (section === t.id ? " active" : "")}
+              onClick={() => setSection(t.id)}>{t.label}</button>
+          ))}
+        </div>
+      )}
+
+      {section === "whoami" ? (
+        <WhoAmI value={whoamiText} onChange={setWhoami} name={people.find((p) => p.id === person).name} />
+      ) : (
+      <React.Fragment>
       <div className="summary">
         <div className="stat">
           <div className="k">Completion</div>
@@ -209,7 +249,7 @@ function App({ user, onSignOut }) {
           <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}>Board</button>
           <button className={view === "timeline" ? "active" : ""} onClick={() => setView("timeline")}>Timeline</button>
         </div>
-        <button className="btn-add" onClick={() => setEditing({ person, category: catFilter === "all" ? "personal" : catFilter, month: 1, status: "planned", title: "", note: "", year, target: 0, progress: 0 })}>+ Add goal</button>
+        <button className="btn-add" onClick={() => setEditing({ person, category: catFilter === "all" ? "personal" : catFilter, month: 1, status: "planned", title: "", note: "", year, target: 0, progress: 0, horizon: goalSection })}>+ Add goal</button>
       </div>
 
       {sync === "loading" ? (
@@ -218,13 +258,15 @@ function App({ user, onSignOut }) {
         <div className="empty">
           <div className="big">🌱</div>
           <div><strong>No goals yet</strong></div>
-          <div>Add {person === "violette" ? "Violette's" : "your"} first goal to get started.</div>
+          <div>Add your first {section === "5y" ? "five-year" : ""} goal to get started.</div>
         </div>
       ) : view === "board" ? (
         <BoardView cats={cats} catFilter={catFilter} visible={visible}
           setStatus={setStatus} setProgress={setProgress} onEdit={setEditing} onDelete={removeGoal} />
       ) : (
         <TimelineView cats={cats} visible={visible} catById={catById} />
+      )}
+      </React.Fragment>
       )}
 
       {editing && (
@@ -424,6 +466,19 @@ function GoalModal({ goal, cats, people, onSave, onCancel }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function WhoAmI({ value, onChange, name }) {
+  return (
+    <div className="whoami">
+      <div className="whoami-head">
+        <h2>Who am I?</h2>
+        <p>{name}'s values, identity, and the person behind the goals. Saved automatically as you type.</p>
+      </div>
+      <textarea className="whoami-text" value={value} onChange={(e) => onChange(e.target.value)}
+        placeholder={"Write freely here…\n\n• My core values\n• What I stand for\n• My strengths & the person I'm becoming\n• What matters most to me\n• My purpose / mission"} />
     </div>
   );
 }
