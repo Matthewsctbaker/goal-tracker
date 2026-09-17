@@ -245,6 +245,9 @@ function App({
   }, {
     id: "whoami",
     label: "Who am I?"
+  }, {
+    id: "os",
+    label: "Operating System"
   }];
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("header", {
     className: "app-head"
@@ -267,7 +270,7 @@ function App({
     className: "count"
   }, personCount(p.id))))), /*#__PURE__*/React.createElement("span", {
     className: "spacer"
-  }), section !== "whoami" && /*#__PURE__*/React.createElement("div", {
+  }), (section === "12m" || section === "5y") && /*#__PURE__*/React.createElement("div", {
     className: "seg year-seg"
   }, years.map(y => /*#__PURE__*/React.createElement("button", {
     key: y,
@@ -291,6 +294,8 @@ function App({
     value: whoamiText,
     onChange: setWhoami,
     name: people.find(p => p.id === person).name
+  }) : section === "os" ? /*#__PURE__*/React.createElement(OperatingSystem, {
+    content: window.OS_CONTENT
   }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "summary"
   }, /*#__PURE__*/React.createElement("div", {
@@ -733,6 +738,54 @@ function WhoAmI({
     onChange: e => onChange(e.target.value),
     placeholder: "Write freely here…\n\n• My core values\n• What I stand for\n• My strengths & the person I'm becoming\n• What matters most to me\n• My purpose / mission"
   }));
+}
+function OperatingSystem({
+  content
+}) {
+  if (!content) return /*#__PURE__*/React.createElement("div", {
+    className: "empty"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "big"
+  }, "\uD83D\uDCD8"), /*#__PURE__*/React.createElement("div", null, "Reference not loaded."));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "os"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "os-hero"
+  }, /*#__PURE__*/React.createElement("h2", null, content.title), /*#__PURE__*/React.createElement("p", null, "A reference for reviewing who you are, where you're headed, and how you operate. Every goal in this app should trace back to a line here.")), content.layers.map(layer => /*#__PURE__*/React.createElement("section", {
+    className: "os-layer",
+    key: layer.title
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "os-layer-head"
+  }, /*#__PURE__*/React.createElement("h3", null, layer.title), /*#__PURE__*/React.createElement("span", {
+    className: "os-cadence"
+  }, layer.cadence)), layer.sections.map(s => /*#__PURE__*/React.createElement("div", {
+    className: "os-section",
+    key: s.n
+  }, /*#__PURE__*/React.createElement("h4", null, /*#__PURE__*/React.createElement("span", {
+    className: "os-num"
+  }, s.n), s.title), /*#__PURE__*/React.createElement("p", {
+    className: "os-why"
+  }, /*#__PURE__*/React.createElement("strong", null, "Why it matters:"), " ", s.why), /*#__PURE__*/React.createElement("div", {
+    className: "os-q-label"
+  }, "Questions"), /*#__PURE__*/React.createElement("ul", {
+    className: "os-questions"
+  }, s.questions.map((q, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, q))), /*#__PURE__*/React.createElement("div", {
+    className: "os-record"
+  }, /*#__PURE__*/React.createElement("strong", null, "Record:"), " ", s.record))))), /*#__PURE__*/React.createElement("section", {
+    className: "os-review"
+  }, /*#__PURE__*/React.createElement("h3", null, content.review.title), /*#__PURE__*/React.createElement("div", {
+    className: "os-table-wrap"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "os-table"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", null, "Cadence"), /*#__PURE__*/React.createElement("th", null, "Sections"), /*#__PURE__*/React.createElement("th", null, "Trigger question"))), /*#__PURE__*/React.createElement("tbody", null, content.review.rows.map(r => /*#__PURE__*/React.createElement("tr", {
+    key: r.cadence
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "os-cad"
+  }, r.cadence), /*#__PURE__*/React.createElement("td", null, r.sections), /*#__PURE__*/React.createElement("td", null, r.trigger))))))), /*#__PURE__*/React.createElement("div", {
+    className: "os-logic"
+  }, /*#__PURE__*/React.createElement("strong", null, "The structural logic:"), " ", content.logic));
 }
 
 // ---------- Auth gate (Google sign-in when Firebase is configured) ----------
