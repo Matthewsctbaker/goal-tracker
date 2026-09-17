@@ -809,10 +809,14 @@ function OperatingSystem({
   }, /*#__PURE__*/React.createElement("h4", null, /*#__PURE__*/React.createElement("span", {
     className: "os-num"
   }, s.n), s.title), /*#__PURE__*/React.createElement("p", {
-    className: "os-question"
-  }, s.question), /*#__PURE__*/React.createElement("p", {
     className: "os-why"
   }, /*#__PURE__*/React.createElement("strong", null, "Why it matters:"), " ", s.why), /*#__PURE__*/React.createElement("div", {
+    className: "os-q-label"
+  }, "Questions"), /*#__PURE__*/React.createElement("ul", {
+    className: "os-questions"
+  }, s.questions.map((q, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, q))), /*#__PURE__*/React.createElement("div", {
     className: "os-record"
   }, /*#__PURE__*/React.createElement("strong", null, "Record:"), " ", s.record))))), /*#__PURE__*/React.createElement("section", {
     className: "os-review"
