@@ -190,7 +190,6 @@ function App({ user, onSignOut }) {
     { id: "12m", label: "Twelve Month Goals" },
     { id: "5y", label: "Five Year Goals" },
     { id: "whoami", label: "Who am I?" },
-    { id: "os", label: "Operating System" },
   ];
 
   return (
@@ -234,8 +233,6 @@ function App({ user, onSignOut }) {
       {section === "whoami" ? (
         <WhoAmI content={window.OS_CONTENT} answers={answers} onChange={setWhoamiField}
           name={people.find((p) => p.id === person).name} />
-      ) : section === "os" ? (
-        <OperatingSystem content={window.OS_CONTENT} />
       ) : (
       <React.Fragment>
       <div className="summary">
@@ -488,7 +485,7 @@ function WhoAmI({ content, answers, onChange, name }) {
     <div className="whoami">
       <div className="whoami-head">
         <h2>Who am I?</h2>
-        <p>{name}'s answers to the Personal Operating System. Saved automatically as you type — see the Operating System tab for why each question matters.</p>
+        <p>{name}'s answers to the Personal Operating System. Saved automatically as you type — expand “Prompts &amp; what to capture” under any question for the full guidance.</p>
       </div>
 
       {layers.map((layer) => (
@@ -519,60 +516,6 @@ function WhoAmI({ content, answers, onChange, name }) {
         <div className="wa-q">Anything else</div>
         <textarea className="wa-input" value={answers.notes || ""}
           onChange={(e) => onChange("notes", e.target.value)} placeholder="Free space for anything not covered above…" />
-      </div>
-    </div>
-  );
-}
-
-function OperatingSystem({ content }) {
-  if (!content) return <div className="empty"><div className="big">📘</div><div>Reference not loaded.</div></div>;
-  return (
-    <div className="os">
-      <div className="os-hero">
-        <h2>{content.title}</h2>
-        <p>A reference for reviewing who you are, where you're headed, and how you operate. Every goal in this app should trace back to a line here.</p>
-      </div>
-
-      {content.layers.map((layer) => (
-        <section className="os-layer" key={layer.title}>
-          <div className="os-layer-head">
-            <h3>{layer.title}</h3>
-            <span className="os-cadence">{layer.cadence}</span>
-          </div>
-          {layer.sections.map((s) => (
-            <div className="os-section" key={s.n}>
-              <h4><span className="os-num">{s.n}</span>{s.title}</h4>
-              <p className="os-why"><strong>Why it matters:</strong> {s.why}</p>
-              <div className="os-q-label">Questions</div>
-              <ul className="os-questions">
-                {s.questions.map((q, i) => <li key={i}>{q}</li>)}
-              </ul>
-              <div className="os-record"><strong>Record:</strong> {s.record}</div>
-            </div>
-          ))}
-        </section>
-      ))}
-
-      <section className="os-review">
-        <h3>{content.review.title}</h3>
-        <div className="os-table-wrap">
-          <table className="os-table">
-            <thead><tr><th>Cadence</th><th>Sections</th><th>Trigger question</th></tr></thead>
-            <tbody>
-              {content.review.rows.map((r) => (
-                <tr key={r.cadence}>
-                  <td className="os-cad">{r.cadence}</td>
-                  <td>{r.sections}</td>
-                  <td>{r.trigger}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <div className="os-logic">
-        <strong>The structural logic:</strong> {content.logic}
       </div>
     </div>
   );
