@@ -504,11 +504,8 @@ function OperatingSystem({ content }) {
           {layer.sections.map((s) => (
             <div className="os-section" key={s.n}>
               <h4><span className="os-num">{s.n}</span>{s.title}</h4>
+              <p className="os-question">{s.question}</p>
               <p className="os-why"><strong>Why it matters:</strong> {s.why}</p>
-              <div className="os-q-label">Questions</div>
-              <ul className="os-questions">
-                {s.questions.map((q, i) => <li key={i}>{q}</li>)}
-              </ul>
               <div className="os-record"><strong>Record:</strong> {s.record}</div>
             </div>
           ))}
