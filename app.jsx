@@ -503,6 +503,13 @@ function WhoAmI({ content, answers, onChange, name }) {
               <div className="wa-q">{s.question}</div>
               <textarea className="wa-input" value={answers["q" + s.n] || ""}
                 onChange={(e) => onChange("q" + s.n, e.target.value)} placeholder="Your answer…" />
+              <details className="wa-prompts">
+                <summary>Prompts &amp; what to capture</summary>
+                <ul className="wa-prompt-list">
+                  {s.questions.map((q, i) => <li key={i}>{q}</li>)}
+                </ul>
+                <div className="wa-capture"><strong>What to capture:</strong> {s.record}</div>
+              </details>
             </div>
           ))}
         </section>

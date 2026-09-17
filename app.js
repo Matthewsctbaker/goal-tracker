@@ -773,7 +773,15 @@ function WhoAmI({
     value: answers["q" + s.n] || "",
     onChange: e => onChange("q" + s.n, e.target.value),
     placeholder: "Your answer\u2026"
-  }))))), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("details", {
+    className: "wa-prompts"
+  }, /*#__PURE__*/React.createElement("summary", null, "Prompts & what to capture"), /*#__PURE__*/React.createElement("ul", {
+    className: "wa-prompt-list"
+  }, s.questions.map((q, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, q))), /*#__PURE__*/React.createElement("div", {
+    className: "wa-capture"
+  }, /*#__PURE__*/React.createElement("strong", null, "What to capture:"), " ", s.record)))))), /*#__PURE__*/React.createElement("div", {
     className: "wa-item"
   }, /*#__PURE__*/React.createElement("div", {
     className: "wa-q"
