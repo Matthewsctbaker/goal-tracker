@@ -175,8 +175,16 @@ function App({ user, onSignOut }) {
   const personCount = (pid) =>
     goals.filter((x) => x.person === pid && horizonOf(x) === "12m" && (x.year || window.SEED_YEAR) === year).length;
 
-  const whoamiText = (data.whoami && data.whoami[person]) || "";
-  const setWhoami = (text) => setData((d) => ({ ...d, whoami: { ...(d.whoami || {}), [person]: text } }));
+  // Who-am-I answers are keyed per section (q1..q9 + notes). Legacy single-string
+  // values are migrated into the "notes" field on first edit.
+  const rawWa = data.whoami && data.whoami[person];
+  const answers = rawWa && typeof rawWa === "object" ? rawWa : (typeof rawWa === "string" ? { notes: rawWa } : {});
+  const setWhoamiField = (key, value) => setData((d) => {
+    const cur = d.whoami || {};
+    const ex = cur[person] && typeof cur[person] === "object" ? cur[person]
+      : (typeof cur[person] === "string" ? { notes: cur[person] } : {});
+    return { ...d, whoami: { ...cur, [person]: { ...ex, [key]: value } } };
+  });
 
   const SUBTABS = [
     { id: "12m", label: "Twelve Month Goals" },
@@ -224,7 +232,8 @@ function App({ user, onSignOut }) {
       )}
 
       {section === "whoami" ? (
-        <WhoAmI value={whoamiText} onChange={setWhoami} name={people.find((p) => p.id === person).name} />
+        <WhoAmI content={window.OS_CONTENT} answers={answers} onChange={setWhoamiField}
+          name={people.find((p) => p.id === person).name} />
       ) : section === "os" ? (
         <OperatingSystem content={window.OS_CONTENT} />
       ) : (
@@ -473,15 +482,37 @@ function GoalModal({ goal, cats, people, onSave, onCancel }) {
   );
 }
 
-function WhoAmI({ value, onChange, name }) {
+function WhoAmI({ content, answers, onChange, name }) {
+  const layers = content ? content.layers : [];
   return (
     <div className="whoami">
       <div className="whoami-head">
         <h2>Who am I?</h2>
-        <p>{name}'s values, identity, and the person behind the goals. Saved automatically as you type.</p>
+        <p>{name}'s answers to the Personal Operating System. Saved automatically as you type — see the Operating System tab for why each question matters.</p>
       </div>
-      <textarea className="whoami-text" value={value} onChange={(e) => onChange(e.target.value)}
-        placeholder={"Write freely here…\n\n• My core values\n• What I stand for\n• My strengths & the person I'm becoming\n• What matters most to me\n• My purpose / mission"} />
+
+      {layers.map((layer) => (
+        <section className="wa-layer" key={layer.title}>
+          <div className="wa-layer-head">
+            <h3>{layer.title}</h3>
+            <span className="os-cadence">{layer.cadence}</span>
+          </div>
+          {layer.sections.map((s) => (
+            <div className="wa-item" key={s.n}>
+              <div className="wa-sec"><span className="os-num">{s.n}</span><span className="wa-title">{s.title}</span></div>
+              <div className="wa-q">{s.question}</div>
+              <textarea className="wa-input" value={answers["q" + s.n] || ""}
+                onChange={(e) => onChange("q" + s.n, e.target.value)} placeholder="Your answer…" />
+            </div>
+          ))}
+        </section>
+      ))}
+
+      <div className="wa-item">
+        <div className="wa-q">Anything else</div>
+        <textarea className="wa-input" value={answers.notes || ""}
+          onChange={(e) => onChange("notes", e.target.value)} placeholder="Free space for anything not covered above…" />
+      </div>
     </div>
   );
 }

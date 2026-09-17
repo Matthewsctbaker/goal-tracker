@@ -228,14 +228,29 @@ function App({
   }
   const catById = id => cats.find(c => c.id === id);
   const personCount = pid => goals.filter(x => x.person === pid && horizonOf(x) === "12m" && (x.year || window.SEED_YEAR) === year).length;
-  const whoamiText = data.whoami && data.whoami[person] || "";
-  const setWhoami = text => setData(d => ({
-    ...d,
-    whoami: {
-      ...(d.whoami || {}),
-      [person]: text
-    }
-  }));
+
+  // Who-am-I answers are keyed per section (q1..q9 + notes). Legacy single-string
+  // values are migrated into the "notes" field on first edit.
+  const rawWa = data.whoami && data.whoami[person];
+  const answers = rawWa && typeof rawWa === "object" ? rawWa : typeof rawWa === "string" ? {
+    notes: rawWa
+  } : {};
+  const setWhoamiField = (key, value) => setData(d => {
+    const cur = d.whoami || {};
+    const ex = cur[person] && typeof cur[person] === "object" ? cur[person] : typeof cur[person] === "string" ? {
+      notes: cur[person]
+    } : {};
+    return {
+      ...d,
+      whoami: {
+        ...cur,
+        [person]: {
+          ...ex,
+          [key]: value
+        }
+      }
+    };
+  });
   const SUBTABS = [{
     id: "12m",
     label: "Twelve Month Goals"
@@ -291,8 +306,9 @@ function App({
     className: "subtab" + (section === t.id ? " active" : ""),
     onClick: () => setSection(t.id)
   }, t.label))), section === "whoami" ? /*#__PURE__*/React.createElement(WhoAmI, {
-    value: whoamiText,
-    onChange: setWhoami,
+    content: window.OS_CONTENT,
+    answers: answers,
+    onChange: setWhoamiField,
     name: people.find(p => p.id === person).name
   }) : section === "os" ? /*#__PURE__*/React.createElement(OperatingSystem, {
     content: window.OS_CONTENT
@@ -724,20 +740,49 @@ function GoalModal({
   }, isNew ? "Add" : "Save"))));
 }
 function WhoAmI({
-  value,
+  content,
+  answers,
   onChange,
   name
 }) {
+  const layers = content ? content.layers : [];
   return /*#__PURE__*/React.createElement("div", {
     className: "whoami"
   }, /*#__PURE__*/React.createElement("div", {
     className: "whoami-head"
-  }, /*#__PURE__*/React.createElement("h2", null, "Who am I?"), /*#__PURE__*/React.createElement("p", null, name, "'s values, identity, and the person behind the goals. Saved automatically as you type.")), /*#__PURE__*/React.createElement("textarea", {
-    className: "whoami-text",
-    value: value,
-    onChange: e => onChange(e.target.value),
-    placeholder: "Write freely here…\n\n• My core values\n• What I stand for\n• My strengths & the person I'm becoming\n• What matters most to me\n• My purpose / mission"
-  }));
+  }, /*#__PURE__*/React.createElement("h2", null, "Who am I?"), /*#__PURE__*/React.createElement("p", null, name, "'s answers to the Personal Operating System. Saved automatically as you type \u2014 see the Operating System tab for why each question matters.")), layers.map(layer => /*#__PURE__*/React.createElement("section", {
+    className: "wa-layer",
+    key: layer.title
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wa-layer-head"
+  }, /*#__PURE__*/React.createElement("h3", null, layer.title), /*#__PURE__*/React.createElement("span", {
+    className: "os-cadence"
+  }, layer.cadence)), layer.sections.map(s => /*#__PURE__*/React.createElement("div", {
+    className: "wa-item",
+    key: s.n
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wa-sec"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "os-num"
+  }, s.n), /*#__PURE__*/React.createElement("span", {
+    className: "wa-title"
+  }, s.title)), /*#__PURE__*/React.createElement("div", {
+    className: "wa-q"
+  }, s.question), /*#__PURE__*/React.createElement("textarea", {
+    className: "wa-input",
+    value: answers["q" + s.n] || "",
+    onChange: e => onChange("q" + s.n, e.target.value),
+    placeholder: "Your answer\u2026"
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "wa-item"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wa-q"
+  }, "Anything else"), /*#__PURE__*/React.createElement("textarea", {
+    className: "wa-input",
+    value: answers.notes || "",
+    onChange: e => onChange("notes", e.target.value),
+    placeholder: "Free space for anything not covered above\u2026"
+  })));
 }
 function OperatingSystem({
   content
