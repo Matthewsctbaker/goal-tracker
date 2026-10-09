@@ -139,7 +139,6 @@ function App({
   const [person, setPerson] = useState("matthew");
   const [section, setSection] = useState("12m"); // 12m | 5y | whoami (Matthew only)
   const [catFilter, setCatFilter] = useState("all");
-  const [view, setView] = useState("board");
   const [editing, setEditing] = useState(null);
 
   // Sub-tabs are Matthew-only; force the goals view for anyone else.
@@ -147,6 +146,9 @@ function App({
     if (person !== "matthew" && section !== "12m") setSection("12m");
   }, [person]);
   const goalSection = section === "5y" ? "5y" : "12m";
+  // 5-year goals are yearly → timeline is category × year (all years at once);
+  // twelve-month goals are monthly → timeline is category × month (per year).
+  const timelineMode = goalSection === "5y" ? "year" : "month";
   const years = useMemo(() => {
     const s = new Set(goals.filter(x => horizonOf(x) === goalSection).map(x => x.year || window.SEED_YEAR));
     if (!s.size) s.add(window.SEED_YEAR);
@@ -157,7 +159,7 @@ function App({
     if (!years.includes(year)) setYear(Math.max.apply(null, years));
   }, [years]); // keep selected year valid as data / section loads
 
-  const mine = useMemo(() => goals.filter(x => x.person === person && horizonOf(x) === goalSection && (x.year || window.SEED_YEAR) === year), [goals, person, year, goalSection]);
+  const mine = useMemo(() => goals.filter(x => x.person === person && horizonOf(x) === goalSection && (timelineMode === "year" || (x.year || window.SEED_YEAR) === year)), [goals, person, year, goalSection, timelineMode]);
   const presentCats = useMemo(() => cats.filter(c => mine.some(x => x.category === c.id)), [cats, mine]);
   useEffect(() => {
     setCatFilter("all");
@@ -282,7 +284,7 @@ function App({
     className: "count"
   }, personCount(p.id))))), /*#__PURE__*/React.createElement("span", {
     className: "spacer"
-  }), (section === "12m" || section === "5y") && /*#__PURE__*/React.createElement("div", {
+  }), section === "12m" && /*#__PURE__*/React.createElement("div", {
     className: "seg year-seg"
   }, years.map(y => /*#__PURE__*/React.createElement("button", {
     key: y,
@@ -365,20 +367,12 @@ function App({
     }
   }), c.name)), /*#__PURE__*/React.createElement("span", {
     className: "spacer"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "seg"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: view === "board" ? "active" : "",
-    onClick: () => setView("board")
-  }, "Board"), /*#__PURE__*/React.createElement("button", {
-    className: view === "timeline" ? "active" : "",
-    onClick: () => setView("timeline")
-  }, "Timeline")), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("button", {
     className: "btn-add",
     onClick: () => setEditing({
       person,
       category: catFilter === "all" ? "personal" : catFilter,
-      month: 1,
+      month: timelineMode === "year" ? 0 : 1,
       status: "planned",
       title: "",
       note: "",
@@ -395,23 +389,17 @@ function App({
     className: "empty"
   }, /*#__PURE__*/React.createElement("div", {
     className: "big"
-  }, "\uD83C\uDF31"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", null, "No goals yet")), /*#__PURE__*/React.createElement("div", null, "Add your first ", section === "5y" ? "five-year" : "", " goal to get started.")) : view === "board" ? /*#__PURE__*/React.createElement(BoardView, {
-    cats: cats,
-    catFilter: catFilter,
-    visible: visible,
-    setStatus: setStatus,
-    setProgress: setProgress,
-    onEdit: setEditing,
-    onDelete: removeGoal
-  }) : /*#__PURE__*/React.createElement(TimelineView, {
+  }, "\uD83C\uDF31"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", null, "No goals yet")), /*#__PURE__*/React.createElement("div", null, "Add your first ", section === "5y" ? "five-year" : "", " goal to get started.")) : /*#__PURE__*/React.createElement(TimelineView, {
     cats: cats,
     visible: visible,
-    catById: catById
+    mode: timelineMode,
+    onEdit: setEditing
   })), editing && /*#__PURE__*/React.createElement(GoalModal, {
     goal: editing,
     cats: cats,
     people: people,
     onSave: saveGoal,
+    onDelete: removeGoal,
     onCancel: () => setEditing(null)
   }), /*#__PURE__*/React.createElement("p", {
     className: "footnote"
@@ -572,24 +560,42 @@ function GoalCard({
 }
 function TimelineView({
   cats,
-  visible
+  visible,
+  mode,
+  onEdit
 }) {
   const rows = cats.filter(c => visible.some(x => x.category === c.id));
-  const months = MONTHS.slice(1);
   if (rows.length === 0) return null;
+  let cols;
+  if (mode === "year") {
+    const ys = Array.from(new Set(visible.map(x => x.year || window.SEED_YEAR))).sort((a, b) => a - b);
+    cols = ys.map(y => ({
+      key: "y" + y,
+      label: String(y),
+      match: x => (x.year || window.SEED_YEAR) === y
+    }));
+  } else {
+    cols = MONTHS.slice(1).map((m, i) => ({
+      key: m,
+      label: m,
+      match: x => x.month === i + 1
+    }));
+  }
+  const minWidth = 150 + cols.length * 100;
   return /*#__PURE__*/React.createElement("div", {
     className: "tl-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "tl-grid",
     style: {
-      gridTemplateColumns: "150px repeat(12, minmax(100px, 1fr))"
+      gridTemplateColumns: "150px repeat(" + cols.length + ", minmax(100px, 1fr))",
+      minWidth: minWidth + "px"
     }
   }, /*#__PURE__*/React.createElement("div", {
     className: "tl-corner"
-  }), months.map(m => /*#__PURE__*/React.createElement("div", {
-    key: m,
+  }), cols.map(col => /*#__PURE__*/React.createElement("div", {
+    key: col.key,
     className: "tl-col-head"
-  }, m)), rows.map(c => /*#__PURE__*/React.createElement(React.Fragment, {
+  }, col.label)), rows.map(c => /*#__PURE__*/React.createElement(React.Fragment, {
     key: c.id
   }, /*#__PURE__*/React.createElement("div", {
     className: "tl-row-head",
@@ -601,19 +607,19 @@ function TimelineView({
     style: {
       background: c.color
     }
-  }), /*#__PURE__*/React.createElement("span", null, c.name)), months.map((m, i) => {
-    const month = i + 1;
-    const items = visible.filter(x => x.category === c.id && x.month === month);
+  }), /*#__PURE__*/React.createElement("span", null, c.name)), cols.map(col => {
+    const items = visible.filter(x => x.category === c.id && col.match(x));
     return /*#__PURE__*/React.createElement("div", {
       className: "tl-cell",
-      key: month
-    }, items.map(x => /*#__PURE__*/React.createElement("span", {
+      key: col.key
+    }, items.map(x => /*#__PURE__*/React.createElement("button", {
       key: x.id,
       className: "tl-chip " + x.status,
       style: {
         borderLeftColor: c.color
       },
-      title: c.name + " · " + x.status
+      title: c.name + " · " + x.status + " — click to edit",
+      onClick: () => onEdit(x)
     }, x.title)));
   })))));
 }
@@ -622,6 +628,7 @@ function GoalModal({
   cats,
   people,
   onSave,
+  onDelete,
   onCancel
 }) {
   const [form, setForm] = useState({
@@ -715,7 +722,15 @@ function GoalModal({
     min: "0",
     value: form.target || 0,
     onChange: e => set("target", Math.max(0, Number(e.target.value)))
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), form.target > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "field"
+  }, /*#__PURE__*/React.createElement("label", null, "Progress (of ", form.target, ")"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    min: "0",
+    max: form.target,
+    value: form.progress || 0,
+    onChange: e => set("progress", Math.max(0, Math.min(form.target, Number(e.target.value))))
+  })), /*#__PURE__*/React.createElement("div", {
     className: "field"
   }, /*#__PURE__*/React.createElement("label", null, "Note (optional)"), /*#__PURE__*/React.createElement("textarea", {
     value: form.note,
@@ -723,7 +738,17 @@ function GoalModal({
     placeholder: "Any detail or target\u2026"
   })), /*#__PURE__*/React.createElement("div", {
     className: "modal-actions"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, !isNew && /*#__PURE__*/React.createElement("button", {
+    className: "danger",
+    onClick: () => {
+      if (confirm("Delete this goal?")) {
+        onDelete(goal.id);
+        onCancel();
+      }
+    }
+  }, "Delete"), /*#__PURE__*/React.createElement("span", {
+    className: "spacer"
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: onCancel
   }, "Cancel"), /*#__PURE__*/React.createElement("button", {
     className: "primary",

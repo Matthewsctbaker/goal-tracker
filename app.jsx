@@ -101,12 +101,14 @@ function App({ user, onSignOut }) {
   const [person, setPerson] = useState("matthew");
   const [section, setSection] = useState("12m"); // 12m | 5y | whoami (Matthew only)
   const [catFilter, setCatFilter] = useState("all");
-  const [view, setView] = useState("board");
   const [editing, setEditing] = useState(null);
 
   // Sub-tabs are Matthew-only; force the goals view for anyone else.
   useEffect(() => { if (person !== "matthew" && section !== "12m") setSection("12m"); }, [person]);
   const goalSection = section === "5y" ? "5y" : "12m";
+  // 5-year goals are yearly → timeline is category × year (all years at once);
+  // twelve-month goals are monthly → timeline is category × month (per year).
+  const timelineMode = goalSection === "5y" ? "year" : "month";
 
   const years = useMemo(() => {
     const s = new Set(goals.filter((x) => horizonOf(x) === goalSection).map((x) => x.year || window.SEED_YEAR));
@@ -119,8 +121,9 @@ function App({ user, onSignOut }) {
   }, [years]); // keep selected year valid as data / section loads
 
   const mine = useMemo(
-    () => goals.filter((x) => x.person === person && horizonOf(x) === goalSection && (x.year || window.SEED_YEAR) === year),
-    [goals, person, year, goalSection]
+    () => goals.filter((x) => x.person === person && horizonOf(x) === goalSection
+      && (timelineMode === "year" || (x.year || window.SEED_YEAR) === year)),
+    [goals, person, year, goalSection, timelineMode]
   );
   const presentCats = useMemo(
     () => cats.filter((c) => mine.some((x) => x.category === c.id)),
@@ -207,7 +210,7 @@ function App({ user, onSignOut }) {
             ))}
           </div>
           <span className="spacer" />
-          {(section === "12m" || section === "5y") && (
+          {section === "12m" && (
             <div className="seg year-seg">
               {years.map((y) => (
                 <button key={y} className={year === y ? "active" : ""} onClick={() => setYear(y)}>{y}</button>
@@ -254,11 +257,7 @@ function App({ user, onSignOut }) {
           </button>
         ))}
         <span className="spacer" />
-        <div className="seg">
-          <button className={view === "board" ? "active" : ""} onClick={() => setView("board")}>Board</button>
-          <button className={view === "timeline" ? "active" : ""} onClick={() => setView("timeline")}>Timeline</button>
-        </div>
-        <button className="btn-add" onClick={() => setEditing({ person, category: catFilter === "all" ? "personal" : catFilter, month: 1, status: "planned", title: "", note: "", year, target: 0, progress: 0, horizon: goalSection })}>+ Add goal</button>
+        <button className="btn-add" onClick={() => setEditing({ person, category: catFilter === "all" ? "personal" : catFilter, month: timelineMode === "year" ? 0 : 1, status: "planned", title: "", note: "", year, target: 0, progress: 0, horizon: goalSection })}>+ Add goal</button>
       </div>
 
       {sync === "loading" ? (
@@ -269,18 +268,15 @@ function App({ user, onSignOut }) {
           <div><strong>No goals yet</strong></div>
           <div>Add your first {section === "5y" ? "five-year" : ""} goal to get started.</div>
         </div>
-      ) : view === "board" ? (
-        <BoardView cats={cats} catFilter={catFilter} visible={visible}
-          setStatus={setStatus} setProgress={setProgress} onEdit={setEditing} onDelete={removeGoal} />
       ) : (
-        <TimelineView cats={cats} visible={visible} catById={catById} />
+        <TimelineView cats={cats} visible={visible} mode={timelineMode} onEdit={setEditing} />
       )}
       </React.Fragment>
       )}
 
       {editing && (
         <GoalModal goal={editing} cats={cats} people={people}
-          onSave={saveGoal} onCancel={() => setEditing(null)} />
+          onSave={saveGoal} onDelete={removeGoal} onCancel={() => setEditing(null)} />
       )}
 
       <p className="footnote">
@@ -379,29 +375,39 @@ function GoalCard({ goal, color, setStatus, setProgress, onEdit, onDelete }) {
   );
 }
 
-function TimelineView({ cats, visible }) {
+function TimelineView({ cats, visible, mode, onEdit }) {
   const rows = cats.filter((c) => visible.some((x) => x.category === c.id));
-  const months = MONTHS.slice(1);
   if (rows.length === 0) return null;
+
+  let cols;
+  if (mode === "year") {
+    const ys = Array.from(new Set(visible.map((x) => x.year || window.SEED_YEAR))).sort((a, b) => a - b);
+    cols = ys.map((y) => ({ key: "y" + y, label: String(y), match: (x) => (x.year || window.SEED_YEAR) === y }));
+  } else {
+    cols = MONTHS.slice(1).map((m, i) => ({ key: m, label: m, match: (x) => x.month === i + 1 }));
+  }
+  const minWidth = 150 + cols.length * 100;
+
   return (
     <div className="tl-wrap">
-      <div className="tl-grid" style={{ gridTemplateColumns: "150px repeat(12, minmax(100px, 1fr))" }}>
+      <div className="tl-grid"
+        style={{ gridTemplateColumns: "150px repeat(" + cols.length + ", minmax(100px, 1fr))", minWidth: minWidth + "px" }}>
         <div className="tl-corner" />
-        {months.map((m) => <div key={m} className="tl-col-head">{m}</div>)}
+        {cols.map((col) => <div key={col.key} className="tl-col-head">{col.label}</div>)}
         {rows.map((c) => (
           <React.Fragment key={c.id}>
             <div className="tl-row-head" style={{ borderLeftColor: c.color }}>
               <span className="swatch" style={{ background: c.color }} />
               <span>{c.name}</span>
             </div>
-            {months.map((m, i) => {
-              const month = i + 1;
-              const items = visible.filter((x) => x.category === c.id && x.month === month);
+            {cols.map((col) => {
+              const items = visible.filter((x) => x.category === c.id && col.match(x));
               return (
-                <div className="tl-cell" key={month}>
+                <div className="tl-cell" key={col.key}>
                   {items.map((x) => (
-                    <span key={x.id} className={"tl-chip " + x.status} style={{ borderLeftColor: c.color }}
-                      title={c.name + " · " + x.status}>{x.title}</span>
+                    <button key={x.id} className={"tl-chip " + x.status} style={{ borderLeftColor: c.color }}
+                      title={c.name + " · " + x.status + " — click to edit"}
+                      onClick={() => onEdit(x)}>{x.title}</button>
                   ))}
                 </div>
               );
@@ -413,7 +419,7 @@ function TimelineView({ cats, visible }) {
   );
 }
 
-function GoalModal({ goal, cats, people, onSave, onCancel }) {
+function GoalModal({ goal, cats, people, onSave, onDelete, onCancel }) {
   const [form, setForm] = useState({ ...goal });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const isNew = !goal.id;
@@ -463,11 +469,23 @@ function GoalModal({ goal, cats, people, onSave, onCancel }) {
               onChange={(e) => set("target", Math.max(0, Number(e.target.value)))} />
           </div>
         </div>
+        {form.target > 0 && (
+          <div className="field">
+            <label>Progress (of {form.target})</label>
+            <input type="number" min="0" max={form.target} value={form.progress || 0}
+              onChange={(e) => set("progress", Math.max(0, Math.min(form.target, Number(e.target.value))))} />
+          </div>
+        )}
         <div className="field">
           <label>Note (optional)</label>
           <textarea value={form.note} onChange={(e) => set("note", e.target.value)} placeholder="Any detail or target…" />
         </div>
         <div className="modal-actions">
+          {!isNew && (
+            <button className="danger"
+              onClick={() => { if (confirm("Delete this goal?")) { onDelete(goal.id); onCancel(); } }}>Delete</button>
+          )}
+          <span className="spacer" />
           <button onClick={onCancel}>Cancel</button>
           <button className="primary" disabled={!form.title.trim()}
             onClick={() => onSave({ ...form, title: form.title.trim() })}>
