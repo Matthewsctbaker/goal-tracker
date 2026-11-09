@@ -376,3 +376,31 @@ body::before {
   font-size: 12.5px; line-height: 1.5; color: var(--muted); padding: 2px 2px 2px 4px;
 }
 .wa-capture strong { color: var(--active); }
+
+/* ---------- Why I work questionnaire ---------- */
+.ww-howto { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.ww-howto strong { color: var(--active); }
+.ww-part { border-top: 2px solid var(--line); margin-top: 20px; padding-top: 8px; }
+.ww-part:first-of-type { border-top: none; margin-top: 10px; }
+.ww-part-title { font-size: 15px; font-weight: 800; margin: 10px 0 4px; color: var(--ink); }
+.ww-section { border-top: 1px solid var(--line); }
+.ww-primary {
+  font-size: 16px; font-weight: 700; line-height: 1.45; margin: 4px 0 14px;
+  border-left: 3px solid var(--financial); padding-left: 12px;
+}
+.ww-sub { margin-bottom: 14px; }
+.ww-sub-label { display: block; font-size: 14px; line-height: 1.45; color: var(--ink); margin-bottom: 6px; }
+.ww-input { min-height: 64px; }
+.ww-nameit-label {
+  font-weight: 700; color: var(--active);
+  border-top: 1px dashed var(--line); padding-top: 12px; margin-top: 2px;
+}
+.ww-closing { border-top: 2px solid var(--line); margin-top: 18px; }
+.ww-closing .ww-primary { border-left-color: var(--done); }
+
+.wordbank { border-top: 2px solid var(--line); margin-top: 18px; padding-top: 6px; }
+.wb-row { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.wb-row:first-of-type { border-top: none; }
+.wb-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); min-width: 80px; }
+.wb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.wb-chip { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--ink); }

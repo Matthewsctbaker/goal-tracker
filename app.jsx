@@ -22,26 +22,26 @@ if (USE_FB) {
 const goalsDoc = () => fbDb.collection("trackers").doc("main");
 
 // ---------- local cache ----------
-// The synced document is { goals: [...], whoami: { <person>: "text" } }.
+// The synced document is { goals: [...], whoami: {...}, whywork: {...} }.
 function loadLocalDoc() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
       return { goals: Array.isArray(s.goals) ? s.goals : window.SEED_GOALS.slice(),
-               whoami: s.whoami || {} };
+               whoami: s.whoami || {}, whywork: s.whywork || {} };
     }
   } catch (e) { /* ignore */ }
-  return { goals: window.SEED_GOALS.slice(), whoami: {} };
+  return { goals: window.SEED_GOALS.slice(), whoami: {}, whywork: {} };
 }
 function saveLocalDoc(data) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify({ goals: data.goals, whoami: data.whoami, seedVersion: window.SEED_VERSION })); }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ goals: data.goals, whoami: data.whoami, whywork: data.whywork, seedVersion: window.SEED_VERSION })); }
   catch (e) { /* ignore */ }
 }
 
 // ---------- store: Firestore when signed in, else localStorage ----------
 function useCloudDoc(user) {
-  const [data, setData] = useState(() => (USE_FB ? { goals: [], whoami: {} } : loadLocalDoc()));
+  const [data, setData] = useState(() => (USE_FB ? { goals: [], whoami: {}, whywork: {} } : loadLocalDoc()));
   const [sync, setSync] = useState(USE_FB ? "loading" : "local"); // loading|synced|saving|offline|local
   const skipWrite = useRef(false);
   const ready = useRef(false);
@@ -56,11 +56,11 @@ function useCloudDoc(user) {
         if (snap.exists) {
           const d = snap.data();
           skipWrite.current = true;
-          setData({ goals: d.goals || [], whoami: d.whoami || {} });
+          setData({ goals: d.goals || [], whoami: d.whoami || {}, whywork: d.whywork || {} });
           ready.current = true;
           setSync("synced");
         } else {
-          goalsDoc().set({ goals: loadLocalDoc().goals, whoami: {}, updatedAt: Date.now() });
+          goalsDoc().set({ goals: loadLocalDoc().goals, whoami: {}, whywork: {}, updatedAt: Date.now() });
         }
       },
       () => setSync("offline")
@@ -76,7 +76,7 @@ function useCloudDoc(user) {
     if (!ready.current) return;
     setSync("saving");
     const t = setTimeout(() => {
-      goalsDoc().set({ goals: data.goals, whoami: data.whoami, updatedAt: Date.now() })
+      goalsDoc().set({ goals: data.goals, whoami: data.whoami, whywork: data.whywork, updatedAt: Date.now() })
         .then(() => setSync("synced"))
         .catch(() => setSync("offline"));
     }, 400);
@@ -189,10 +189,18 @@ function App({ user, onSignOut }) {
     return { ...d, whoami: { ...cur, [person]: { ...ex, [key]: value } } };
   });
 
+  const workAnswers = (data.whywork && data.whywork[person]) || {};
+  const setWorkField = (key, value) => setData((d) => {
+    const cur = d.whywork || {};
+    const ex = (cur[person] && typeof cur[person] === "object") ? cur[person] : {};
+    return { ...d, whywork: { ...cur, [person]: { ...ex, [key]: value } } };
+  });
+
   const SUBTABS = [
     { id: "12m", label: "Twelve Month Goals" },
     { id: "5y", label: "Five Year Goals" },
     { id: "whoami", label: "Who am I?" },
+    { id: "work", label: "Why I work" },
   ];
 
   return (
@@ -236,6 +244,8 @@ function App({ user, onSignOut }) {
       {section === "whoami" ? (
         <WhoAmI content={window.OS_CONTENT} answers={answers} onChange={setWhoamiField}
           name={people.find((p) => p.id === person).name} />
+      ) : section === "work" ? (
+        <WhyIWork content={window.WORK_CONTENT} answers={workAnswers} onChange={setWorkField} />
       ) : (
       <React.Fragment>
       <div className="summary">
@@ -535,6 +545,62 @@ function WhoAmI({ content, answers, onChange, name }) {
         <textarea className="wa-input" value={answers.notes || ""}
           onChange={(e) => onChange("notes", e.target.value)} placeholder="Free space for anything not covered above…" />
       </div>
+    </div>
+  );
+}
+
+function WhyIWork({ content, answers, onChange }) {
+  if (!content) return null;
+  const field = (key, placeholder) => (
+    <textarea className="wa-input ww-input" value={answers[key] || ""}
+      onChange={(e) => onChange(key, e.target.value)} placeholder={placeholder || "Your answer…"} />
+  );
+  return (
+    <div className="whoami whywork">
+      <div className="whoami-head">
+        <h2>{content.title}</h2>
+        <p>{content.intro}</p>
+        <p className="ww-howto"><strong>How to use:</strong> {content.howto}</p>
+      </div>
+
+      {content.parts.map((part) => (
+        <section className="ww-part" key={part.title}>
+          <h3 className="ww-part-title">{part.title}</h3>
+          {part.sections.map((s) => (
+            <div className="wa-item ww-section" key={s.n}>
+              <div className="wa-sec"><span className="os-num">{s.n}</span><span className="wa-title">{s.title}</span></div>
+              <div className="ww-primary">{s.primary}</div>
+              {s.subs.map((sub, i) => (
+                <div className="ww-sub" key={i}>
+                  <label className="ww-sub-label">{sub}</label>
+                  {field("s" + s.n + "_q" + i)}
+                </div>
+              ))}
+              {s.nameit ? (
+                <div className="ww-sub">
+                  <label className="ww-sub-label ww-nameit-label">Name it: {s.nameit}</label>
+                  {field("s" + s.n + "_name", "Name it…")}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </section>
+      ))}
+
+      <div className="wa-item ww-section ww-closing">
+        <div className="ww-primary">{content.closing}</div>
+        {field("closing", "One sentence — no job title…")}
+      </div>
+
+      <section className="wordbank">
+        <h3 className="ww-part-title">Word bank</h3>
+        {content.wordbank.map((g) => (
+          <div className="wb-row" key={g.label}>
+            <span className="wb-label">{g.label}</span>
+            <div className="wb-chips">{g.words.map((w) => <span className="wb-chip" key={w}>{w}</span>)}</div>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }

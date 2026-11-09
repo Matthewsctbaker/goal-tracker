@@ -37,7 +37,7 @@ if (USE_FB) {
 const goalsDoc = () => fbDb.collection("trackers").doc("main");
 
 // ---------- local cache ----------
-// The synced document is { goals: [...], whoami: { <person>: "text" } }.
+// The synced document is { goals: [...], whoami: {...}, whywork: {...} }.
 function loadLocalDoc() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -45,13 +45,15 @@ function loadLocalDoc() {
       const s = JSON.parse(raw);
       return {
         goals: Array.isArray(s.goals) ? s.goals : window.SEED_GOALS.slice(),
-        whoami: s.whoami || {}
+        whoami: s.whoami || {},
+        whywork: s.whywork || {}
       };
     }
   } catch (e) {/* ignore */}
   return {
     goals: window.SEED_GOALS.slice(),
-    whoami: {}
+    whoami: {},
+    whywork: {}
   };
 }
 function saveLocalDoc(data) {
@@ -59,6 +61,7 @@ function saveLocalDoc(data) {
     localStorage.setItem(STORE_KEY, JSON.stringify({
       goals: data.goals,
       whoami: data.whoami,
+      whywork: data.whywork,
       seedVersion: window.SEED_VERSION
     }));
   } catch (e) {/* ignore */}
@@ -68,7 +71,8 @@ function saveLocalDoc(data) {
 function useCloudDoc(user) {
   const [data, setData] = useState(() => USE_FB ? {
     goals: [],
-    whoami: {}
+    whoami: {},
+    whywork: {}
   } : loadLocalDoc());
   const [sync, setSync] = useState(USE_FB ? "loading" : "local"); // loading|synced|saving|offline|local
   const skipWrite = useRef(false);
@@ -85,7 +89,8 @@ function useCloudDoc(user) {
         skipWrite.current = true;
         setData({
           goals: d.goals || [],
-          whoami: d.whoami || {}
+          whoami: d.whoami || {},
+          whywork: d.whywork || {}
         });
         ready.current = true;
         setSync("synced");
@@ -93,6 +98,7 @@ function useCloudDoc(user) {
         goalsDoc().set({
           goals: loadLocalDoc().goals,
           whoami: {},
+          whywork: {},
           updatedAt: Date.now()
         });
       }
@@ -114,6 +120,7 @@ function useCloudDoc(user) {
       goalsDoc().set({
         goals: data.goals,
         whoami: data.whoami,
+        whywork: data.whywork,
         updatedAt: Date.now()
       }).then(() => setSync("synced")).catch(() => setSync("offline"));
     }, 400);
@@ -253,6 +260,21 @@ function App({
       }
     };
   });
+  const workAnswers = data.whywork && data.whywork[person] || {};
+  const setWorkField = (key, value) => setData(d => {
+    const cur = d.whywork || {};
+    const ex = cur[person] && typeof cur[person] === "object" ? cur[person] : {};
+    return {
+      ...d,
+      whywork: {
+        ...cur,
+        [person]: {
+          ...ex,
+          [key]: value
+        }
+      }
+    };
+  });
   const SUBTABS = [{
     id: "12m",
     label: "Twelve Month Goals"
@@ -262,6 +284,9 @@ function App({
   }, {
     id: "whoami",
     label: "Who am I?"
+  }, {
+    id: "work",
+    label: "Why I work"
   }];
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("header", {
     className: "app-head"
@@ -309,6 +334,10 @@ function App({
     answers: answers,
     onChange: setWhoamiField,
     name: people.find(p => p.id === person).name
+  }) : section === "work" ? /*#__PURE__*/React.createElement(WhyIWork, {
+    content: window.WORK_CONTENT,
+    answers: workAnswers,
+    onChange: setWorkField
   }) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "summary"
   }, /*#__PURE__*/React.createElement("div", {
@@ -811,6 +840,69 @@ function WhoAmI({
     onChange: e => onChange("notes", e.target.value),
     placeholder: "Free space for anything not covered above\u2026"
   })));
+}
+function WhyIWork({
+  content,
+  answers,
+  onChange
+}) {
+  if (!content) return null;
+  const field = (key, placeholder) => /*#__PURE__*/React.createElement("textarea", {
+    className: "wa-input ww-input",
+    value: answers[key] || "",
+    onChange: e => onChange(key, e.target.value),
+    placeholder: placeholder || "Your answer…"
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    className: "whoami whywork"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "whoami-head"
+  }, /*#__PURE__*/React.createElement("h2", null, content.title), /*#__PURE__*/React.createElement("p", null, content.intro), /*#__PURE__*/React.createElement("p", {
+    className: "ww-howto"
+  }, /*#__PURE__*/React.createElement("strong", null, "How to use:"), " ", content.howto)), content.parts.map(part => /*#__PURE__*/React.createElement("section", {
+    className: "ww-part",
+    key: part.title
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "ww-part-title"
+  }, part.title), part.sections.map(s => /*#__PURE__*/React.createElement("div", {
+    className: "wa-item ww-section",
+    key: s.n
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "wa-sec"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "os-num"
+  }, s.n), /*#__PURE__*/React.createElement("span", {
+    className: "wa-title"
+  }, s.title)), /*#__PURE__*/React.createElement("div", {
+    className: "ww-primary"
+  }, s.primary), s.subs.map((sub, i) => /*#__PURE__*/React.createElement("div", {
+    className: "ww-sub",
+    key: i
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "ww-sub-label"
+  }, sub), field("s" + s.n + "_q" + i))), s.nameit ? /*#__PURE__*/React.createElement("div", {
+    className: "ww-sub"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "ww-sub-label ww-nameit-label"
+  }, "Name it: ", s.nameit), field("s" + s.n + "_name", "Name it…")) : null)))), /*#__PURE__*/React.createElement("div", {
+    className: "wa-item ww-section ww-closing"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ww-primary"
+  }, content.closing), field("closing", "One sentence — no job title…")), /*#__PURE__*/React.createElement("section", {
+    className: "wordbank"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "ww-part-title"
+  }, "Word bank"), content.wordbank.map(g => /*#__PURE__*/React.createElement("div", {
+    className: "wb-row",
+    key: g.label
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "wb-label"
+  }, g.label), /*#__PURE__*/React.createElement("div", {
+    className: "wb-chips"
+  }, g.words.map(w => /*#__PURE__*/React.createElement("span", {
+    className: "wb-chip",
+    key: w
+  }, w)))))));
 }
 
 // ---------- Auth gate (Google sign-in when Firebase is configured) ----------
