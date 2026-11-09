@@ -822,7 +822,7 @@ function WhoAmI({
     value: answers["q" + s.n] || "",
     onChange: e => onChange("q" + s.n, e.target.value),
     placeholder: "Your answer\u2026"
-  }), s.questions.map((sub, i) => /*#__PURE__*/React.createElement("div", {
+  }), s.questions.map((sub, i) => s.dropFirst && i === 0 ? null : /*#__PURE__*/React.createElement("div", {
     className: "ww-sub",
     key: i
   }, /*#__PURE__*/React.createElement("label", {

@@ -11,6 +11,7 @@ window.OS_CONTENT = {
         {
           n: 1,
           title: "Purpose Statement",
+          dropFirst: true,
           why: "Purpose is the only thing that stays stable when your job, city, or circumstances change. Without it, every career decision restarts from zero.",
           question: "If money and titles didn't exist, what would you still want your work to accomplish?",
           questions: [
@@ -24,6 +25,7 @@ window.OS_CONTENT = {
         {
           n: 2,
           title: "Values in Action",
+          dropFirst: true,
           why: "A list of abstract nouns changes nothing. Values only earn their keep when they can resolve a hard trade-off, which means each one needs a stated cost.",
           question: "What have you paid a real price to protect — and would again?",
           questions: [
@@ -37,6 +39,7 @@ window.OS_CONTENT = {
         {
           n: 3,
           title: "Signature Strengths",
+          dropFirst: true,
           why: "Most people underweight what comes easily to them because it feels unremarkable. That blind spot is where your leverage is hiding.",
           question: "What do people consistently come to you for, even outside your job description?",
           questions: [
@@ -70,6 +73,7 @@ window.OS_CONTENT = {
         {
           n: 5,
           title: "Impact & Contribution",
+          dropFirst: true,
           why: "This is your missing category, and it's the one that most reliably makes decisions easier. It replaces “personal brand” with something you can act on: the specific difference you want to make in specific people.",
           question: "Who do you most want to be useful to, and what do they get from you?",
           questions: [
@@ -83,6 +87,7 @@ window.OS_CONTENT = {
         {
           n: 6,
           title: "How I Want to Be Experienced",
+          dropFirst: true,
           why: "Your renamed Personal Brand. Reputation isn't something you declare — it's the residue of repeated behaviour. The value is in comparing the intended experience to the actual one.",
           question: "What three words would you want people to use about you when you're not in the room?",
           questions: [
@@ -96,6 +101,7 @@ window.OS_CONTENT = {
         {
           n: 7,
           title: "Direction & Horizons",
+          dropFirst: true,
           why: "Purpose without a horizon becomes philosophy. This is where identity converts into goals — and it's the section that connects this framework to the rest of your app.",
           question: "Describe an ordinary Wednesday three years from now — what's different?",
           questions: [

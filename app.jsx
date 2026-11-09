@@ -529,11 +529,13 @@ function WhoAmI({ content, answers, onChange, name }) {
               <textarea className="wa-input ww-input" value={answers["q" + s.n] || ""}
                 onChange={(e) => onChange("q" + s.n, e.target.value)} placeholder="Your answer…" />
               {s.questions.map((sub, i) => (
-                <div className="ww-sub" key={i}>
-                  <label className="ww-sub-label">{sub}</label>
-                  <textarea className="wa-input ww-input" value={answers["s" + s.n + "_q" + i] || ""}
-                    onChange={(e) => onChange("s" + s.n + "_q" + i, e.target.value)} placeholder="Your answer…" />
-                </div>
+                (s.dropFirst && i === 0) ? null : (
+                  <div className="ww-sub" key={i}>
+                    <label className="ww-sub-label">{sub}</label>
+                    <textarea className="wa-input ww-input" value={answers["s" + s.n + "_q" + i] || ""}
+                      onChange={(e) => onChange("s" + s.n + "_q" + i, e.target.value)} placeholder="Your answer…" />
+                  </div>
+                )
               ))}
               <div className="wa-capture"><strong>What to capture:</strong> {s.record}</div>
             </div>
