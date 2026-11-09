@@ -175,4 +175,16 @@ window.WORK_CONTENT = {
     { label: "Emotions", words: ["inspired", "energised", "proud", "trusted", "curious", "valued", "stifled", "bored", "drained", "frustrated", "hollow", "restless"] },
     { label: "Verbs", words: ["build", "create", "solve", "persuade", "advise", "lead", "teach", "connect", "strategise"] },
   ],
+  summary: {
+    title: "Summary — your throughlines",
+    intro: "Across almost every “Name it”, the same few threads kept surfacing:",
+    points: [
+      { label: "Connection & genuine people", text: "the thing you light up around, and the thing whose absence drains you most." },
+      { label: "Driven / high-performing", text: "you want to be pushed, around people pulling the same way." },
+      { label: "Autonomy", text: "trusted to run things and apply your own creative solutions — micromanagement is your clearest deal-breaker." },
+      { label: "Impact through growing people", text: "coaching, mentoring, and seeing others grow is what you'd do even for less." },
+      { label: "Meaningful problem-solving", text: "especially the creative deal-construction only you seem to crack." },
+    ],
+    compass: "A competitive, highly driven, exciting environment that pushes me to be a better version of myself, among people who care and are driven the same way.",
+  },
 };

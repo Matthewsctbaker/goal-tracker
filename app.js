@@ -863,7 +863,17 @@ function WhyIWork({
     className: "whoami-head"
   }, /*#__PURE__*/React.createElement("h2", null, content.title), /*#__PURE__*/React.createElement("p", null, content.intro), /*#__PURE__*/React.createElement("p", {
     className: "ww-howto"
-  }, /*#__PURE__*/React.createElement("strong", null, "How to use:"), " ", content.howto)), content.parts.map(part => /*#__PURE__*/React.createElement("section", {
+  }, /*#__PURE__*/React.createElement("strong", null, "How to use:"), " ", content.howto)), content.summary ? /*#__PURE__*/React.createElement("section", {
+    className: "ww-summary"
+  }, /*#__PURE__*/React.createElement("h3", null, content.summary.title), /*#__PURE__*/React.createElement("p", {
+    className: "ww-summary-intro"
+  }, content.summary.intro), /*#__PURE__*/React.createElement("ul", {
+    className: "ww-summary-list"
+  }, content.summary.points.map((p, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, /*#__PURE__*/React.createElement("strong", null, p.label), " \u2014 ", p.text))), /*#__PURE__*/React.createElement("div", {
+    className: "ww-summary-compass"
+  }, /*#__PURE__*/React.createElement("span", null, "Your compass, in your words"), "\u201C", content.summary.compass, "\u201D")) : null, content.parts.map(part => /*#__PURE__*/React.createElement("section", {
     className: "ww-part",
     key: part.title
   }, /*#__PURE__*/React.createElement("h3", {

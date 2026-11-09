@@ -566,6 +566,19 @@ function WhyIWork({ content, answers, onChange }) {
         <p className="ww-howto"><strong>How to use:</strong> {content.howto}</p>
       </div>
 
+      {content.summary ? (
+        <section className="ww-summary">
+          <h3>{content.summary.title}</h3>
+          <p className="ww-summary-intro">{content.summary.intro}</p>
+          <ul className="ww-summary-list">
+            {content.summary.points.map((p, i) => <li key={i}><strong>{p.label}</strong> — {p.text}</li>)}
+          </ul>
+          <div className="ww-summary-compass">
+            <span>Your compass, in your words</span>“{content.summary.compass}”
+          </div>
+        </section>
+      ) : null}
+
       {content.parts.map((part) => (
         <section className="ww-part" key={part.title}>
           <h3 className="ww-part-title">{part.title}</h3>
