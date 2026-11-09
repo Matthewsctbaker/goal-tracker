@@ -799,7 +799,7 @@ function WhoAmI({
     className: "whoami"
   }, /*#__PURE__*/React.createElement("div", {
     className: "whoami-head"
-  }, /*#__PURE__*/React.createElement("h2", null, "Who am I?"), /*#__PURE__*/React.createElement("p", null, name, "'s answers to the Personal Operating System. Saved automatically as you type \u2014 expand \u201CPrompts & what to capture\u201D under any question for the full guidance.")), layers.map(layer => /*#__PURE__*/React.createElement("section", {
+  }, /*#__PURE__*/React.createElement("h2", null, "Who am I?"), /*#__PURE__*/React.createElement("p", null, name, "'s answers to the Personal Operating System. Each section's question is split into its original prompts \u2014 answer the headline, then any prompts that help. Saved automatically as you type.")), layers.map(layer => /*#__PURE__*/React.createElement("section", {
     className: "wa-layer",
     key: layer.title
   }, /*#__PURE__*/React.createElement("div", {
@@ -807,7 +807,7 @@ function WhoAmI({
   }, /*#__PURE__*/React.createElement("h3", null, layer.title), /*#__PURE__*/React.createElement("span", {
     className: "os-cadence"
   }, layer.cadence)), layer.sections.map(s => /*#__PURE__*/React.createElement("div", {
-    className: "wa-item",
+    className: "wa-item ww-section",
     key: s.n
   }, /*#__PURE__*/React.createElement("div", {
     className: "wa-sec"
@@ -816,26 +816,30 @@ function WhoAmI({
   }, s.n), /*#__PURE__*/React.createElement("span", {
     className: "wa-title"
   }, s.title)), /*#__PURE__*/React.createElement("div", {
-    className: "wa-q"
+    className: "ww-primary"
   }, s.question), /*#__PURE__*/React.createElement("textarea", {
-    className: "wa-input",
+    className: "wa-input ww-input",
     value: answers["q" + s.n] || "",
     onChange: e => onChange("q" + s.n, e.target.value),
     placeholder: "Your answer\u2026"
-  }), /*#__PURE__*/React.createElement("details", {
-    className: "wa-prompts"
-  }, /*#__PURE__*/React.createElement("summary", null, "Prompts & what to capture"), /*#__PURE__*/React.createElement("ul", {
-    className: "wa-prompt-list"
-  }, s.questions.map((q, i) => /*#__PURE__*/React.createElement("li", {
+  }), s.questions.map((sub, i) => /*#__PURE__*/React.createElement("div", {
+    className: "ww-sub",
     key: i
-  }, q))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "ww-sub-label"
+  }, sub), /*#__PURE__*/React.createElement("textarea", {
+    className: "wa-input ww-input",
+    value: answers["s" + s.n + "_q" + i] || "",
+    onChange: e => onChange("s" + s.n + "_q" + i, e.target.value),
+    placeholder: "Your answer\u2026"
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "wa-capture"
-  }, /*#__PURE__*/React.createElement("strong", null, "What to capture:"), " ", s.record)))))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("strong", null, "What to capture:"), " ", s.record))))), /*#__PURE__*/React.createElement("div", {
     className: "wa-item"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "wa-q"
+    className: "ww-primary"
   }, "Anything else"), /*#__PURE__*/React.createElement("textarea", {
-    className: "wa-input",
+    className: "wa-input ww-input",
     value: answers.notes || "",
     onChange: e => onChange("notes", e.target.value),
     placeholder: "Free space for anything not covered above\u2026"

@@ -513,7 +513,7 @@ function WhoAmI({ content, answers, onChange, name }) {
     <div className="whoami">
       <div className="whoami-head">
         <h2>Who am I?</h2>
-        <p>{name}'s answers to the Personal Operating System. Saved automatically as you type — expand “Prompts &amp; what to capture” under any question for the full guidance.</p>
+        <p>{name}'s answers to the Personal Operating System. Each section's question is split into its original prompts — answer the headline, then any prompts that help. Saved automatically as you type.</p>
       </div>
 
       {layers.map((layer) => (
@@ -523,26 +523,27 @@ function WhoAmI({ content, answers, onChange, name }) {
             <span className="os-cadence">{layer.cadence}</span>
           </div>
           {layer.sections.map((s) => (
-            <div className="wa-item" key={s.n}>
+            <div className="wa-item ww-section" key={s.n}>
               <div className="wa-sec"><span className="os-num">{s.n}</span><span className="wa-title">{s.title}</span></div>
-              <div className="wa-q">{s.question}</div>
-              <textarea className="wa-input" value={answers["q" + s.n] || ""}
+              <div className="ww-primary">{s.question}</div>
+              <textarea className="wa-input ww-input" value={answers["q" + s.n] || ""}
                 onChange={(e) => onChange("q" + s.n, e.target.value)} placeholder="Your answer…" />
-              <details className="wa-prompts">
-                <summary>Prompts &amp; what to capture</summary>
-                <ul className="wa-prompt-list">
-                  {s.questions.map((q, i) => <li key={i}>{q}</li>)}
-                </ul>
-                <div className="wa-capture"><strong>What to capture:</strong> {s.record}</div>
-              </details>
+              {s.questions.map((sub, i) => (
+                <div className="ww-sub" key={i}>
+                  <label className="ww-sub-label">{sub}</label>
+                  <textarea className="wa-input ww-input" value={answers["s" + s.n + "_q" + i] || ""}
+                    onChange={(e) => onChange("s" + s.n + "_q" + i, e.target.value)} placeholder="Your answer…" />
+                </div>
+              ))}
+              <div className="wa-capture"><strong>What to capture:</strong> {s.record}</div>
             </div>
           ))}
         </section>
       ))}
 
       <div className="wa-item">
-        <div className="wa-q">Anything else</div>
-        <textarea className="wa-input" value={answers.notes || ""}
+        <div className="ww-primary">Anything else</div>
+        <textarea className="wa-input ww-input" value={answers.notes || ""}
           onChange={(e) => onChange("notes", e.target.value)} placeholder="Free space for anything not covered above…" />
       </div>
     </div>
